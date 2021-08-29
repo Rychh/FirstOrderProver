@@ -120,8 +120,8 @@ nnf F = F
 nnf (Not F) = T
 nnf (Rel r ts) = (Rel r ts)
 nnf (Not (Rel r ts)) = (Not (Rel r ts))
--- nnf (Prop p) = (Prop p)
--- nnf (Not (Prop p)) = (Not (Prop p))
+nnf (Prop p) = (Prop p)
+nnf (Not (Prop p)) = (Not (Prop p))
 nnf (And phi psi) = (And (nnf phi) (nnf psi))
 nnf (Not (And phi psi)) = nnf (Or (Not(phi)) (Not(psi)))
 nnf (Or phi psi) = (Or (nnf phi) (nnf psi))
@@ -150,6 +150,9 @@ pnf' (Or  (Exists x psi) phi) = pull Or  Exists x psi phi
 pnf' (Or  phi (Exists x psi)) = pull Or  Exists x psi phi
 pnf' (And psi phi) = pull_2 And psi phi
 pnf' (Or  psi phi) = pull_2 Or  psi phi
+pnf' (Exists x psi) = Exists x $ pnf' psi
+pnf' (Forall x psi) = Forall x $ pnf' psi
+
 pnf' f = f
 
 is_forall_or_exists (Forall _ _) = True
