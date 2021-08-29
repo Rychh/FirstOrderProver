@@ -34,18 +34,19 @@ main = do
 
 prover :: Formula -> Bool
 prover phi =
-    let phi' = removeForall $ skolemise $ Not phi
-    grounds = groundInstances phi' $ if null $ constants (sig phi')
-        then map (\x -> Fun x []) (fv phi')
-        else nub $ constants (sig phi')
+    let
+        phi' = removeForall $ skolemise $ Not phi
+        grounds = groundInstances phi' $ if null $ constants (sig phi')
+            then map (\x -> Fun x []) (fv phi')
+            else nub $ constants (sig phi')
 
-    check x = not $ satDP $ nub $ concatMap (ecnf . relProp) (nub x)
+        check x = not $ sat $ nub $ concatMap (ecnf . relProp) (nub x)
 
-    nextCs x = nub $ concatMap (nub . formula_constants) $ nub x
-    nextGrounds x = nub $ groundInstances phi' $ nub $ nextCs x
+        nextCs x = nub $ concatMap (nub . formula_constants) $ nub x
+        nextGrounds x = nub $ groundInstances phi' $ nub $ nextCs x
 
-    check Next x =
-        let xx = nextGrounds x
-        in (check x || ((xx /= [] && xx /= x) && checkNext xx) )
+        checkNext x =
+            let xx = nextGrounds x
+            in (check x || ((xx /= [] && xx /= x) && checkNext xx) )
     in
         if null grounds then check [phi'] else checkNext grounds

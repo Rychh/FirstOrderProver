@@ -7,12 +7,7 @@ import Data.List
 import Control.Monad
 import Control.Monad.State
 
-import Text.Parsec
---import Text.ParserCombinators.Parsec
-import Text.ParserCombinators.Parsec.Expr
-import Text.ParserCombinators.Parsec.Language
-import qualified Text.ParserCombinators.Parsec.Token as Token
-import Test.QuickCheck hiding (Fun, (===))
+
 
 import Formula
 
