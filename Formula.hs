@@ -29,6 +29,8 @@ variables (Fun _ ts) = nub $ concatMap variables ts
 
 type FunInt a = FunName -> [a] -> a
 type Env a = VarName -> a
+type Arity = Int
+type Signature = [(FunName, Arity)]
 
 evalTerm :: FunInt a -> Env a -> Term -> a
 evalTerm _ rho (Var x) = rho x
@@ -138,3 +140,19 @@ fv (Forall x phi) = delete x $ fv phi
 
 phifun = Exists "x" (Rel "R" [Fun "f" [Var "x", Var "y"], Var "z"])
 prop_fv = fv phifun == ["y", "z"]
+
+formula_constants :: Formula -> [Term]
+formula_constants T = []
+formula_constants (Rel _ ts) = concatMap term_constants ts
+formula_constants (Not phi) = formula_constants phi
+formula_constants (And phi psi) = nub $ formula_constants phi ++ formula_constants psi
+formula_constants (Or phi psi) = nub $ formula_constants phi ++ formula_constants psi
+formula_constants (Implies phi psi) = nub $ formula_constants phi ++ formula_constants psi
+formula_constants (Iff phi psi) = nub $ formula_constants phi ++ formula_constants psi
+formula_constants (Exists _ phi) = formula_constants phi
+formula_constants (Forall _ phi) = formula_constants phi
+
+term_constants :: Term -> [Term]
+term_constants (Var _) = []
+term_constants f@(Fun _ []) = [f]
+term_constants f@(Fun _ ts) = if length (concatMap term_constants ts) == length ts then [f] else []
