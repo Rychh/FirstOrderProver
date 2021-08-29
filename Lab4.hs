@@ -1,6 +1,6 @@
 {-# LANGUAGE UnicodeSyntax, TypeSynonymInstances, FlexibleInstances #-}
 
-module Labs where
+module Lab4 where
 
 import System.IO
 import Data.List

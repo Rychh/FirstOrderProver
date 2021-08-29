@@ -31,6 +31,7 @@ type FunInt a = FunName -> [a] -> a
 type Env a = VarName -> a
 type Arity = Int
 type Signature = [(FunName, Arity)]
+type PropName = String
 
 evalTerm :: FunInt a -> Env a -> Term -> a
 evalTerm _ rho (Var x) = rho x
@@ -40,6 +41,7 @@ evalTerm int rho (Fun f ts) = int f $ map (evalTerm int rho) ts
 data Formula =
       F
     | T
+    | Prop PropName -- atomic formulas
     | Rel RelName [Term]
     | Not Formula
     | Or Formula Formula
