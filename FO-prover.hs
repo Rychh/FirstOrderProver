@@ -48,24 +48,63 @@ genPropFormula :: Formula -> Formula
 genPropFormula phi = replaceToProps phi (genProps (atomicFormulas phi) 2)
 
 
-prover :: Formula -> Bool
-prover phi =
-    let
-        phi' = removeForall $ skolemise $ Not phi
-        grounds = groundInstances phi' $ if null $ constants (sig phi')
-            then map (\x -> Fun x []) (fv phi')
-            else nub $ constants (sig phi')
 
-        check x = not $ davids_putnam (nub $ concatMap (ecnf . genPropFormula) (nub x)) True
+getFunct :: [Term] -> [Term]
+getFunct [] = []
+getFunct (h:t) =
+  case h of
+    Var a -> (getFunct t)
+    Fun f [] -> (getFunct t)
+    Fun f a -> nub $ [(Fun f a)] ++ (getFunct a) ++ (getFunct t)
 
-        nextCs x = nub $ concatMap (nub . formula_constants) $ nub x
-        nextGrounds x = nub $ groundInstances phi' $ nub $ nextCs x
+getFunctions :: Formula -> [Term]
+getFunctions T = []
+getFunctions F = []
+getFunctions (Rel r []) = []
+getFunctions (Rel r ts) = getFunct ts
+getFunctions (Not phi) = getFunctions phi
+getFunctions (And phi psi) = nub $ getFunctions phi ++ getFunctions psi
+getFunctions (Or phi psi) = nub $ getFunctions phi ++ getFunctions psi
+getFunctions (Implies phi psi) = nub $ getFunctions phi ++ getFunctions psi
+getFunctions (Iff phi psi) =nub $ getFunctions phi ++ getFunctions psi
+getFunctions (Exists _ phi) =nub $ getFunctions phi
+getFunctions (Forall _ phi) = nub $getFunctions phi
 
-        checkNext x =
-            let xx = nextGrounds x
-            in (check x || ((xx /= [] && xx /= x) && checkNext xx) )
-    in
-        if null grounds then check [phi'] else checkNext grounds
+r :: [Term] -> Formula -> [Term]
+r [] phi = (nub $ getFunctions phi)
+r t phi = t ++ (nub $ getFunctions phi)
+
+
+conjunctGroundInstances :: Formula -> Formula
+conjunctGroundInstances = Prelude.foldr And T . ground . removeForall where
+  ground phi = groundInstances phi (Prelude.map Var (vars phi) ++ (nub $ r (constants (sig phi)) phi))
+prover :: FOProver
+prover f =
+  let skolemised = skolemise (Not f) in
+  let f2 = conjunctGroundInstances skolemised in
+  not (sat_DP (genPropFormula f2))
+
+
+--prover :: Formula -> Bool
+--prover phi =
+--    let
+--        phi' = removeForall $ skolemise $ Not phi
+--        grounds = groundInstances phi' (Prelude.map Var (vars phi') ++ (nub $ r (constants (sig phi')) phi'))
+----        groundInstances phi' $ if null $ constants (sig phi')
+----            then map (\x -> Fun x []) (fv phi')
+----            else nub $ constants (sig phi')
+--
+--        check x = not $ davids_putnam (nub $ concatMap (ecnf . genPropFormula) (nub x)) True
+--
+--        nextCs x = nub $ concatMap (nub . formula_constants) $ nub x
+--        nextGrounds x = nub $ groundInstances phi' $ nub $ nextCs x
+--
+--        checkNext x =
+--            let xx = nextGrounds x
+--            in (check x || ((xx /= [] && xx /= x) && checkNext xx) )
+--    in check [phi']
+--        if null grounds then  else checkNext grounds
+
 
 main :: IO ()
 main = do
