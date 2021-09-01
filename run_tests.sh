@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TIMEOUT_AMOUNT=10sz
+TIMEOUT_AMOUNT=10s
 TIMEOUT=$(if which timeout >& /dev/null; then echo "timeout"; else echo "gtimeout"; fi)
 PROVER=FO-prover
 
