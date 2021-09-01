@@ -20,11 +20,9 @@ import Formula
 import Parser hiding (one)
 
 
--- todo zmien to:
-
-genProps :: [Formula] -> Integer -> [(Formula, Formula)]
-genProps [] _ = []
-genProps (h:t) k = (h, (Prop (show k))):(genProps t (k+1))
+generateProps :: [Formula] -> Integer -> [(Formula, Formula)]
+generateProps [] _ = []
+generateProps (h:t) k = (h, (Prop (show k))):(generateProps t (k+1))
 
 findWithPairs :: Formula -> [(Formula, Formula)] -> Formula
 findWithPairs phi ((k, a):t) =
@@ -44,66 +42,41 @@ replaceToProps (Iff phi psi) k = Iff (replaceToProps phi k) (replaceToProps psi 
 replaceToProps (Exists x phi) k = Exists x (replaceToProps phi k)
 replaceToProps (Forall x phi) k = Forall x (replaceToProps phi k)
 
-genPropFormula :: Formula -> Formula
-genPropFormula phi = replaceToProps phi (genProps (atomicFormulas phi) 2)
+generatePropsFormula :: Formula -> Formula
+generatePropsFormula phi = replaceToProps phi (generateProps (atomicFormulas phi) 2)
 
-
-
-getFunct :: [Term] -> [Term]
-getFunct [] = []
-getFunct (h:t) =
+functionsFromTerns :: [Term] -> [Term]
+functionsFromTerns [] = []
+functionsFromTerns (h:t) =
   case h of
-    Var a -> (getFunct t)
-    Fun f [] -> (getFunct t)
-    Fun f a -> nub $ [(Fun f a)] ++ (getFunct a) ++ (getFunct t)
+    Var a -> (functionsFromTerns t)
+    Fun f [] -> (functionsFromTerns t)
+    Fun f a -> nub $ [(Fun f a)] ++ ( nub $ functionsFromTerns a) ++ ( nub $ functionsFromTerns t)
 
-getFunctions :: Formula -> [Term]
-getFunctions T = []
-getFunctions F = []
-getFunctions (Rel r []) = []
-getFunctions (Rel r ts) = getFunct ts
-getFunctions (Not phi) = getFunctions phi
-getFunctions (And phi psi) = nub $ getFunctions phi ++ getFunctions psi
-getFunctions (Or phi psi) = nub $ getFunctions phi ++ getFunctions psi
-getFunctions (Implies phi psi) = nub $ getFunctions phi ++ getFunctions psi
-getFunctions (Iff phi psi) =nub $ getFunctions phi ++ getFunctions psi
-getFunctions (Exists _ phi) =nub $ getFunctions phi
-getFunctions (Forall _ phi) = nub $getFunctions phi
+functionsFromFormula :: Formula -> [Term]
+functionsFromFormula T = []
+functionsFromFormula F = []
+functionsFromFormula (Rel r []) = []
+functionsFromFormula (Rel r ts) = nub $ functionsFromTerns ts
+functionsFromFormula (Not phi) = functionsFromFormula phi
+functionsFromFormula (And phi psi) = nub $ functionsFromFormula phi ++ functionsFromFormula psi
+functionsFromFormula (Or phi psi) = nub $ functionsFromFormula phi ++ functionsFromFormula psi
+functionsFromFormula (Implies phi psi) = nub $ functionsFromFormula phi ++ functionsFromFormula psi
+functionsFromFormula (Iff phi psi) =nub $ functionsFromFormula phi ++ functionsFromFormula psi
+functionsFromFormula (Exists _ phi) =nub $ functionsFromFormula phi
+functionsFromFormula (Forall _ phi) = nub $ functionsFromFormula phi
 
-r :: [Term] -> Formula -> [Term]
-r [] phi = (nub $ getFunctions phi)
-r t phi = t ++ (nub $ getFunctions phi)
-
-
-conjunctGroundInstances :: Formula -> Formula
-conjunctGroundInstances = Prelude.foldr And T . ground . removeForall where
-  ground phi = groundInstances phi (Prelude.map Var (vars phi) ++ (nub $ r (constants (sig phi)) phi))
 prover :: FOProver
-prover f =
-  let skolemised = skolemise (Not f) in
-  let f2 = conjunctGroundInstances skolemised in
-  not (sat_DP (genPropFormula f2))
-
-
---prover :: Formula -> Bool
---prover phi =
---    let
---        phi' = removeForall $ skolemise $ Not phi
---        grounds = groundInstances phi' (Prelude.map Var (vars phi') ++ (nub $ r (constants (sig phi')) phi'))
-----        groundInstances phi' $ if null $ constants (sig phi')
-----            then map (\x -> Fun x []) (fv phi')
-----            else nub $ constants (sig phi')
---
---        check x = not $ davids_putnam (nub $ concatMap (ecnf . genPropFormula) (nub x)) True
---
---        nextCs x = nub $ concatMap (nub . formula_constants) $ nub x
---        nextGrounds x = nub $ groundInstances phi' $ nub $ nextCs x
---
---        checkNext x =
---            let xx = nextGrounds x
---            in (check x || ((xx /= [] && xx /= x) && checkNext xx) )
---    in check [phi']
---        if null grounds then  else checkNext grounds
+prover formula =
+    let
+        cleared_formula = removeForall $ skolemise $ Not formula
+        consts =  constants (sig cleared_formula)
+        terms = if null $ consts
+            then (Prelude.map Var (vars cleared_formula))
+            else (nub $ consts ++ functionsFromFormula cleared_formula)
+        ground = groundInstances cleared_formula terms
+        formula' = Prelude.foldr And T ground
+   in not (sat_DP (generatePropsFormula formula'))
 
 
 main :: IO ()
